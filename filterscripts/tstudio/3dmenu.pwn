@@ -59,14 +59,14 @@ tsfunc Create3DMenu(playerid,Float:x,Float:y,Float:z,Float:rotation,boxes)
 		MenuInfo[i][AddingX] = 0.25*floatsin(rotation,degrees);
 		MenuInfo[i][AddingY] = -floatcos(rotation,degrees)*0.25;
 
-		NextLineX = floatcos(rotation,degrees)+0.05*floatcos(rotation,degrees);
-		NextLineY = floatsin(rotation,degrees)+0.05*floatsin(rotation,degrees);
+		NextLineX = floatcos(rotation,degrees)-0.5*floatcos(rotation,degrees);
+		NextLineY = floatsin(rotation,degrees)-0.5*floatsin(rotation,degrees);
 
 		// Create menu objects
 		for(new b = 0; b < boxes; b++)
 		{
   			if(b%4 == 0 && b != 0) lineindx++,binc+=4;
-   			MenuInfo[i][Objects][b] = CreateDynamicObject(2661,x+NextLineX*lineindx,y+NextLineY*lineindx,z+1.65-0.55*(b-binc),0,0,rotation,-1,-1,playerid,100.0);
+   			MenuInfo[i][Objects][b] = CreateDynamicObject(19475,x+NextLineX*lineindx,y+NextLineY*lineindx,z+1.15-0.43*(b-binc),0,0,rotation + 90.0,-1,-1,playerid,100.0);
       		GetDynamicObjectPos(MenuInfo[i][Objects][b],MenuInfo[i][OrigPosX][b],MenuInfo[i][OrigPosY][b],MenuInfo[i][OrigPosZ][b]);
 		}
 		MenuInfo[i][IsExist] = true;

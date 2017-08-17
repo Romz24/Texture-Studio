@@ -219,6 +219,9 @@ Change Log:
 #undef MAX_PLAYERS
 #define MAX_PLAYERS 10
 
+// recursion warnings (abs compiler)
+#pragma disablerecursion
+
 // "tsfunc" definition, to replace "stock"
 #define tsfunc
 	

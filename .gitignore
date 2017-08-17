@@ -8,6 +8,9 @@ server_log.txt
 crashinfo.txt
 *.exe
 
+# abs compiler
+rus.txt
+
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 
