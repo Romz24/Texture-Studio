@@ -37,7 +37,7 @@ public OnGameModeInit()
 	SetGameModeText("TS 1.8");
 	UsePlayerPedAnims();
 
-	AddPlayerClass(265,1958.3783,1343.1572,15.3746,270.1425,0,0,0,0,-1,-1);
+	AddPlayerClass(265,-109.5519,969.8337,12.3475,270.1425,0,0,0,0,-1,-1);
 
 	return 1;
 }
