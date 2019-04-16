@@ -269,7 +269,7 @@ Change Log:
 #define         STEALTH_YELLOW         0xFFFF00AA
 
 // Maximum number of objects
-#define         MAX_TEXTURE_OBJECTS         10000
+#define         MAX_TEXTURE_OBJECTS         50000
 
 // Maximum number of remove buildings (Anymore than 1000 will likely crash GTA)
 #define         MAX_REMOVE_BUILDING         1000
