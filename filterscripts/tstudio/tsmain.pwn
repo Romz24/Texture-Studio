@@ -2100,6 +2100,7 @@ ImportMap(playerid)
 	new item[40], itype;
 	new line[1024];
 	new fcount;
+	new templast, templastid[32];
 	new tmp[16];
 	new tmpobject[OBJECTINFO];
 	new tmpremove[REMOVEINFO];
@@ -2108,21 +2109,21 @@ ImportMap(playerid)
 	while(dir_list(dHandle, item, itype))
 	{
    		if(itype != FM_DIR)
-	    {
+		{
 			format(line, sizeof(line), "%s\n%s", item, line);
 			fcount++;
-	    }
+		}
 	}
 
 	// Found import files
 	if(fcount > 0)
 	{
-        inline Select(spid, sdialogid, sresponse, slistitem, string:stext[])
-        {
-            #pragma unused slistitem, sdialogid, spid
+		inline Select(spid, sdialogid, sresponse, slistitem, string:stext[])
+		{
+			#pragma unused slistitem, sdialogid, spid
 			// Selected a file
-            if(sresponse)
-            {
+			if(sresponse)
+			{
 				SendClientMessage(playerid, STEALTH_ORANGE, "______________________________________________");
 				SendClientMessage(playerid, STEALTH_GREEN, "Map importing has started, this make a while depending on map size");
 
@@ -2133,50 +2134,94 @@ ImportMap(playerid)
 				f = fopen(tempmap,io_read);
 
 				// Read lines and import data
+				db_begin_transaction(EditMap);
 				while(fread(f,templine,sizeof(templine),false))
 				{
-					// Is the line a valid create object line?
-
 					strtrim(templine);
+				
 					new type;
-			  		if(strfind(templine, "CreateObject", true) != -1) type = 1;
-			        if(strfind(templine, "CreateDynamicObject", true) != -1) type = 2;
-			        if(strfind(templine, "RemoveBuildingForPlayer", true) != -1) type = 3;
-					if(type == 0) continue;
-					if(type == 1) strmid(templine, templine, 13, sizeof(templine), sizeof(templine));
-					if(type == 2) strmid(templine, templine, 20, sizeof(templine), sizeof(templine));
-					if(type == 3) strmid(templine, templine, 24, sizeof(templine), sizeof(templine));
-
-					strmid(templine, templine, 0, strfind(templine, ");", true), sizeof(templine));
-
-					if(type == 1 || type == 2)
-					{
-						sscanf(templine, "p<,>iffffff", tmpobject[oModel], tmpobject[oX], tmpobject[oY], tmpobject[oZ],
-						    tmpobject[oRX], tmpobject[oRY], tmpobject[oRZ]);
-
-						// Create the new object
-				        AddDynamicObject(tmpobject[oModel], tmpobject[oX], tmpobject[oY], tmpobject[oZ], tmpobject[oRX], tmpobject[oRY], tmpobject[oRZ]);
-	                    icount++;
+			  		if(strfind(templine, "CreateObject(", true) != -1) type = 1;
+					else if(strfind(templine, "CreateDynamicObject(", true) != -1) type = 1;
+					else if(strfind(templine, "RemoveBuildingForPlayer(", true) != -1) type = 2;
+					else if(strfind(templine, "SetObjectMaterial(", true) != -1) type = 3;
+					else if(strfind(templine, "SetDynamicObjectMaterial(", true) != -1) type = 3;
+					else if(strfind(templine, "SetObjectMaterialText(", true) != -1) type = 4;
+					else if(strfind(templine, "SetDynamicObjectMaterialText(", true) != -1) type = 4;
+					else continue;
+					
+					new assignment = strfind(templine, "="); 
+					if(assignment != -1) {
+						strmid(templastid, templine, 0, assignment);
+						strtrim(templastid);
 					}
-					else if(type == 3)
+					
+					strmid(templine, templine, strfind(templine, "(") + 1, strfind(templine, ");"), sizeof(templine));
+
+					if(type == 1)
 					{
-						sscanf(templine, "p<,>s[16]iffff", tmp, tmpremove[rModel], tmpremove[rX], tmpremove[rY], tmpremove[rZ], tmpremove[rRange]);
+						if(sscanf(templine, "p<,>iffffff", tmpobject[oModel], tmpobject[oX], tmpobject[oY], tmpobject[oZ], tmpobject[oRX], tmpobject[oRY], tmpobject[oRZ]))
+							continue;
+						
+						// Create the new object
+						templast = AddDynamicObject(tmpobject[oModel], tmpobject[oX], tmpobject[oY], tmpobject[oZ], tmpobject[oRX], tmpobject[oRY], tmpobject[oRZ]);
+						icount++;
+					}
+					else if(type == 2)
+					{
+						if(sscanf(templine, "p<,>s[16]iffff", tmp, tmpremove[rModel], tmpremove[rX], tmpremove[rY], tmpremove[rZ], tmpremove[rRange]))
+							continue;
 
 						// Delete building
 						AddRemoveBuilding(tmpremove[rModel], tmpremove[rX], tmpremove[rY], tmpremove[rZ], tmpremove[rRange], true);
 
-					    rcount++;
+						rcount++;
 					}
+					else if(type == 3)
+					{
+						strreplace(templine, "\"", "");//"
+						
+						new tempindex, tempmodel, temptxd[32], temptexture[32], tempcolor;
+						if(sscanf(templine, "p<,>s[16]iis[32]s[32]h", tmp, tempindex, tempmodel, temptxd, temptexture, tempcolor))
+							continue;
+						
+						if(strcmp(tmp, templastid)) // Stuff before '=' doesn't equal stuff in first param
+							continue;
+						
+						ObjectData[templast][oColorIndex][tempindex] = tempcolor;
+						for(new i = 0; i < sizeof(ObjectTextures); i++)
+						{
+							if(!strcmp(ObjectTextures[i][TextureName], temptexture))
+							{
+								ObjectData[templast][oTexIndex][tempindex] = i;
+								break;
+							}
+						}
+						
+						sqlite_SaveMaterialIndex(templast);
+						sqlite_SaveColorIndex(templast);
+			
+						UpdateMaterial(templast);
+					}
+					else if(type == 4)
+					{
+						//SetObjectMaterialText(tmp, text[], index, mat_size, fontface[], fontsize, bold, color, backcolor, alignment)
+						
+						// start by extracting text[], removing it from the parameters
+						// then sscanf all other params separate
+					}
+					
+					UpdateObject3DText(templast, true);
 				}
+				db_end_transaction(EditMap);
 
 				format(templine, sizeof(templine), "%i objects were imported, %i removed buildings were imported", icount, rcount);
 				SendClientMessage(playerid, STEALTH_GREEN, templine);
 
 				// Were done importing
 				fclose(f);
-            }
+			}
 		}
-        Dialog_ShowCallback(playerid, using inline Select, DIALOG_STYLE_LIST, "Texture Studio (Import Map)", line, "Ok", "Cancel");
+		Dialog_ShowCallback(playerid, using inline Select, DIALOG_STYLE_LIST, "Texture Studio (Import Map)", line, "Ok", "Cancel");
 	}
 	else
 	{
